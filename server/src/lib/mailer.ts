@@ -62,15 +62,22 @@ export const mailDefaults = {
   from: MAIL_FROM,
 };
 
-// Validate SMTP credentials early to surface misconfiguration quickly
-console.log("[MAILER] Verificando conexion SMTP...");
-transporter
-  .verify()
-  .then(() => {
-    console.log("[MAILER] SMTP verificado y listo para enviar correos");
-  })
-  .catch((err: Error) => {
-    console.error("[MAILER] No se pudo verificar SMTP. Revise variables .env");
-    console.error("[MAILER] Error detalles:", err.message);
-    console.error("[MAILER] Stack:", err.stack);
-  });
+// Validate SMTP credentials early to surface misconfiguration quickly.
+// Allow skipping via env to avoid failing boot when SMTP is blocked.
+if (process.env.SKIP_SMTP_VERIFY !== "true") {
+  console.log("[MAILER] Verificando conexion SMTP...");
+  transporter
+    .verify()
+    .then(() => {
+      console.log("[MAILER] SMTP verificado y listo para enviar correos");
+    })
+    .catch((err: Error) => {
+      console.error(
+        "[MAILER] No se pudo verificar SMTP. Revise variables .env o habilite SKIP_SMTP_VERIFY=true"
+      );
+      console.error("[MAILER] Error detalles:", err.message);
+      console.error("[MAILER] Stack:", err.stack);
+    });
+} else {
+  console.log("[MAILER] SKIP_SMTP_VERIFY=true, omitiendo verificacion inicial");
+}
