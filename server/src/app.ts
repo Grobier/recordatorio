@@ -9,12 +9,20 @@ import emailRouter from "./routes/email";
 dotenv.config();
 
 const app = express();
-const clientOrigin = process.env.CLIENT_ORIGIN || "http://localhost:3000";
+const allowedOrigins = (process.env.CLIENT_ORIGIN || "http://localhost:3000")
+  .split(",")
+  .map((o) => o.trim())
+  .filter(Boolean);
 const defaultProfesional = process.env.DEFAULT_PROFESIONAL || "";
 
 app.use(
   cors({
-    origin: clientOrigin,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true); // allow non-browser requests
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.warn("[CORS] Origin no permitido:", origin);
+      return callback(new Error("Not allowed by CORS"));
+    },
   })
 );
 app.use(express.json());
