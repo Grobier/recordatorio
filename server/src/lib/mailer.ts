@@ -40,14 +40,13 @@ export const transporter = nodemailer.createTransport({
   connectionTimeout: SMTP_TIMEOUT_MS,
   greetingTimeout: SMTP_TIMEOUT_MS,
   socketTimeout: SMTP_TIMEOUT_MS,
-  // Mejorar el manejo de errores de conexión
   pool: false,
   maxConnections: 1,
   maxMessages: 1,
 });
 
-// Agregar event listeners para debugging
-transporter.on("token", (token) => {
+// Event listeners for debugging
+transporter.on("token", (token: unknown) => {
   console.log("[MAILER] Token recibido:", token);
 });
 
@@ -55,8 +54,8 @@ transporter.on("idle", () => {
   console.log("[MAILER] Transporter en estado idle");
 });
 
-transporter.on("error", (error) => {
-  console.error("[MAILER] ✗ Error en transporter:", error);
+transporter.on("error", (error: Error) => {
+  console.error("[MAILER] Error en transporter:", error);
 });
 
 export const mailDefaults = {
@@ -64,14 +63,14 @@ export const mailDefaults = {
 };
 
 // Validate SMTP credentials early to surface misconfiguration quickly
-console.log("[MAILER] Verificando conexión SMTP...");
+console.log("[MAILER] Verificando conexion SMTP...");
 transporter
   .verify()
   .then(() => {
-    console.log("[MAILER] ✓ SMTP verificado y listo para enviar correos");
+    console.log("[MAILER] SMTP verificado y listo para enviar correos");
   })
-  .catch((err) => {
-    console.error("[MAILER] ✗ No se pudo verificar SMTP. Revise variables .env");
+  .catch((err: Error) => {
+    console.error("[MAILER] No se pudo verificar SMTP. Revise variables .env");
     console.error("[MAILER] Error detalles:", err.message);
     console.error("[MAILER] Stack:", err.stack);
   });

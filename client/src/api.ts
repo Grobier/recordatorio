@@ -4,10 +4,32 @@ const API_URL = import.meta.env.VITE_API_URL || "";
 
 const headers = { "Content-Type": "application/json" };
 
+// Función auxiliar para manejar respuestas y errores
+async function handleResponse<T>(res: Response): Promise<T> {
+  const contentType = res.headers.get("content-type");
+  
+  // Verificar si la respuesta es HTML en lugar de JSON
+  if (contentType && contentType.includes("text/html")) {
+    const text = await res.text();
+    console.error("Error: Se recibió HTML en lugar de JSON. Respuesta:", text.substring(0, 200));
+    throw new Error(
+      `Error de configuración: La API no está disponible. ` +
+      `Verifica que VITE_API_URL esté configurada correctamente. ` +
+      `URL actual: ${API_URL || "(vacía)"}`
+    );
+  }
+  
+  if (!res.ok) {
+    throw new Error(`Error HTTP: ${res.status} ${res.statusText}`);
+  }
+  
+  return res.json();
+}
+
 export const api = {
   async listPacientes(): Promise<Paciente[]> {
     const res = await fetch(`${API_URL}/api/pacientes`);
-    return res.json();
+    return handleResponse<Paciente[]>(res);
   },
   async createPaciente(data: Partial<Paciente>) {
     const res = await fetch(`${API_URL}/api/pacientes`, {
@@ -15,7 +37,7 @@ export const api = {
       headers,
       body: JSON.stringify(data),
     });
-    return res.json();
+    return handleResponse(res);
   },
   async updatePaciente(id: number, data: Partial<Paciente>) {
     const res = await fetch(`${API_URL}/api/pacientes/${id}`, {
@@ -23,13 +45,13 @@ export const api = {
       headers,
       body: JSON.stringify(data),
     });
-    return res.json();
+    return handleResponse(res);
   },
   async deletePaciente(id: number) {
     const res = await fetch(`${API_URL}/api/pacientes/${id}`, {
       method: "DELETE",
     });
-    return res.json();
+    return handleResponse(res);
   },
   async listCitas(params?: {
     pacienteId?: number;
@@ -44,7 +66,7 @@ export const api = {
     const res = await fetch(
       `${API_URL}/api/citas${query.toString() ? "?" + query.toString() : ""}`
     );
-    return res.json();
+    return handleResponse<Cita[]>(res);
   },
   async createCita(data: Partial<Cita>) {
     const res = await fetch(`${API_URL}/api/citas`, {
@@ -52,7 +74,7 @@ export const api = {
       headers,
       body: JSON.stringify(data),
     });
-    return res.json();
+    return handleResponse(res);
   },
   async updateCita(id: number, data: Partial<Cita>) {
     const res = await fetch(`${API_URL}/api/citas/${id}`, {
@@ -60,13 +82,13 @@ export const api = {
       headers,
       body: JSON.stringify(data),
     });
-    return res.json();
+    return handleResponse(res);
   },
   async deleteCita(id: number) {
     const res = await fetch(`${API_URL}/api/citas/${id}`, {
       method: "DELETE",
     });
-    return res.json();
+    return handleResponse(res);
   },
   async sendCitaciones(citaIds: number[]) {
     const res = await fetch(`${API_URL}/api/email/citacion`, {
@@ -74,7 +96,7 @@ export const api = {
       headers,
       body: JSON.stringify({ citaIds }),
     });
-    return res.json();
+    return handleResponse(res);
   },
   async sendComprobantes(citaIds: number[]) {
     const res = await fetch(`${API_URL}/api/email/comprobante`, {
@@ -82,14 +104,14 @@ export const api = {
       headers,
       body: JSON.stringify({ citaIds }),
     });
-    return res.json();
+    return handleResponse(res);
   },
   async historialEnvios(): Promise<RegistroEnvio[]> {
     const res = await fetch(`${API_URL}/api/citas/historial/envios`);
-    return res.json();
+    return handleResponse<RegistroEnvio[]>(res);
   },
   async config(): Promise<{ defaultProfesional?: string }> {
     const res = await fetch(`${API_URL}/api/config`);
-    return res.json();
+    return handleResponse<{ defaultProfesional?: string }>(res);
   },
 };
