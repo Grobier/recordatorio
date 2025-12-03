@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Paciente {
+  id             Int                  @id @default(autoincrement())
+  nombreCompleto String
+  rut            String?              @unique
+  correo         String
+  telefono       String?
+  observaciones  String?
+  citas          Cita[]
+  registros      RegistroEnvioCorreo[]
+}
+
+model Cita {
+  id             Int                  @id @default(autoincrement())
+  paciente       Paciente             @relation(fields: [pacienteId], references: [id])
+  pacienteId     Int
+  fechaSesion    DateTime
+  horaSesion     String
+  lugar          String
+  profesional    String
+  tipoPrestacion String
+  estado         String               @default("PROGRAMADA")
+  creadoEn       DateTime             @default(now())
+  registros      RegistroEnvioCorreo[]
+}
+
+model RegistroEnvioCorreo {
+  id           Int      @id @default(autoincrement())
+  tipoEnvio    String   @default("CITACION")
+  cita         Cita     @relation(fields: [citaId], references: [id])
+  citaId       Int
+  paciente     Paciente @relation(fields: [pacienteId], references: [id])
+  pacienteId   Int
+  fechaEnvio   DateTime @default(now())
+  resultado    String   @default("OK")
+  mensajeError String?
+}
+
+// En SQLite se usan strings para enum-like fields por compatibilidad
+// (valores esperados en la app: CITACION/COMPROBANTE, OK/ERROR, PROGRAMADA/ASISTIDA/AUSENTE)
