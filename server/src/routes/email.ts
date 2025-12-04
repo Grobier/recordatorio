@@ -10,6 +10,13 @@ import { EstadoCita } from "../types";
 
 const router = Router();
 
+type ResultadoEnvio = {
+  citaId: number;
+  pacienteId?: number;
+  status: "OK" | "ERROR";
+  message?: string;
+};
+
 const sendForCitas = async ({
   citaIds,
   tipo,
@@ -17,29 +24,19 @@ const sendForCitas = async ({
   citaIds: number[];
   tipo: "CITACION" | "COMPROBANTE";
 }) => {
-  console.log(`[EMAIL] Iniciando envío de ${tipo} para ${citaIds.length} citas:`, citaIds);
-  
-  const resultados: {
-    citaId: number;
-    pacienteId?: number;
-    status: "OK" | "ERROR";
-    message?: string;
-  }[] = [];
+  console.log([EMAIL] Iniciando envio de  para  citas:, citaIds);
+
+  const resultados: ResultadoEnvio[] = [];
 
   for (const citaId of citaIds) {
     let pacienteId: number | undefined;
     try {
-      console.log(`[EMAIL] Procesando cita ${citaId}...`);
-      
       const cita = await prisma.cita.findUnique({
         where: { id: citaId },
         include: { paciente: true },
       });
 
-      console.log(`[EMAIL] Cita ${citaId} encontrada:`, cita ? "SÍ" : "NO");
-
       if (!cita || !cita.paciente) {
-        console.log(`[EMAIL] ERROR: Cita ${citaId} o paciente no encontrado`);
         resultados.push({
           citaId,
           status: "ERROR",
@@ -49,10 +46,8 @@ const sendForCitas = async ({
       }
 
       pacienteId = cita.pacienteId;
-      console.log(`[EMAIL] Paciente ID: ${pacienteId}, Correo: ${cita.paciente.correo || "NO TIENE"}`);
 
       if (!cita.paciente.correo) {
-        console.log(`[EMAIL] ERROR: Paciente ${pacienteId} no tiene correo`);
         resultados.push({
           citaId,
           pacienteId: cita.pacienteId,
@@ -66,9 +61,7 @@ const sendForCitas = async ({
         cita.profesional || process.env.DEFAULT_PROFESIONAL || "Kinesiologo/a";
 
       const baseUrl =
-        process.env.BASE_URL ||
-        process.env.CLIENT_ORIGIN ||
-        "http://localhost:4000";
+        process.env.BASE_URL || process.env.CLIENT_ORIGIN || "http://localhost:4000";
 
       const emailData = {
         citaId: cita.id,
@@ -81,8 +74,6 @@ const sendForCitas = async ({
         baseUrl,
       };
 
-      console.log(`[EMAIL] Construyendo contenido del correo para cita ${citaId}...`);
-      
       const content =
         tipo === "CITACION"
           ? buildCitacionEmail(emailData)
@@ -90,7 +81,6 @@ const sendForCitas = async ({
 
       const attachments = [...logoAttachment];
 
-      // Preparar el correo (siempre con html + texto de confirmacion)
       const mailOptions: any = {
         ...mailDefaults,
         to: cita.paciente.correo,
@@ -100,17 +90,11 @@ const sendForCitas = async ({
         attachments,
       };
 
-      console.log(`[EMAIL] Preparando envío a ${cita.paciente.correo}...`);
-      console.log(`[EMAIL] Asunto: ${content.subject}`);
-      console.log(`[EMAIL] Desde: ${mailDefaults.from}`);
-      console.log(`[EMAIL] Adjuntos: ${attachments.length}`);
-      
       const startTime = Date.now();
       await transporter.sendMail(mailOptions);
       const duration = Date.now() - startTime;
-      console.log(`[EMAIL] ✓ Correo enviado exitosamente para cita ${citaId} (${duration}ms)`);
+      console.log([EMAIL] Correo enviado para cita  (ms));
 
-      console.log(`[EMAIL] Guardando registro de envío en BD para cita ${citaId}...`);
       await prisma.registroEnvioCorreo.create({
         data: {
           tipoEnvio: tipo,
@@ -119,20 +103,11 @@ const sendForCitas = async ({
           resultado: "OK",
         },
       });
-      console.log(`[EMAIL] Registro guardado exitosamente para cita ${citaId}`);
 
-      resultados.push({
-        citaId,
-        pacienteId: cita.pacienteId,
-        status: "OK",
-      });
+      resultados.push({ citaId, pacienteId: cita.pacienteId, status: "OK" });
     } catch (error: any) {
-      console.error(`[EMAIL] ✗ ERROR enviando correo para cita ${citaId}:`, error);
-      console.error(`[EMAIL] Tipo de error:`, error?.constructor?.name);
-      console.error(`[EMAIL] Mensaje de error:`, error?.message);
-      console.error(`[EMAIL] Stack:`, error?.stack);
-      
-      // Intentar guardar el error en la BD, pero no fallar si no se puede
+      console.error([EMAIL] ERROR enviando correo para cita :, error);
+
       try {
         if (pacienteId) {
           await prisma.registroEnvioCorreo.create({
@@ -141,7 +116,7 @@ const sendForCitas = async ({
               citaId,
               pacienteId,
               resultado: "ERROR",
-              mensajeError: error.message || String(error),
+              mensajeError: error?.message || String(error),
             },
           });
         }
@@ -149,44 +124,45 @@ const sendForCitas = async ({
         console.error("Error guardando registro de error en BD:", dbError);
       }
 
-      const errorMessage = error.message || String(error) || "Error desconocido";
-      
       resultados.push({
         citaId,
         pacienteId,
         status: "ERROR",
-        message: errorMessage,
+        message: error?.message || String(error) || "Error desconocido",
       });
     }
   }
 
-  console.log(`[EMAIL] Proceso completado. Resultados:`, resultados);
+  console.log([EMAIL] Proceso completado. Resultados:, resultados);
   return resultados;
 };
 
 router.post("/citacion", async (req, res) => {
-  console.log(`[API] POST /email/citacion recibido`);
-  console.log(`[API] Body recibido:`, JSON.stringify(req.body));
-  
+  console.log([API] POST /email/citacion recibido);
+  console.log([API] Body recibido:, JSON.stringify(req.body));
+
   try {
     const { citaIds } = req.body as { citaIds: number[] };
-    console.log(`[API] CitaIds extraídas:`, citaIds);
 
     if (!Array.isArray(citaIds) || citaIds.length === 0) {
-      console.log(`[API] ERROR: Lista de citas inválida o vacía`);
       return res
         .status(400)
         .json({ success: false, message: "Debe enviar lista de citas" });
     }
 
-    console.log(`[API] Iniciando proceso de envío de citaciones...`);
     const resultados = await sendForCitas({ citaIds, tipo: "CITACION" });
-    console.log(`[API] Proceso completado, enviando respuesta...`);
-    res.json({ success: true, resultados });
-    console.log(`[API] Respuesta enviada exitosamente`);
+    const ok = resultados.filter((r) => r.status === "OK").length;
+    const errors = resultados.filter((r) => r.status === "ERROR").length;
+    const hasError = errors > 0;
+
+    const payload = { success: !hasError, resultados, ok, errors };
+    if (hasError) {
+      return res.status(502).json(payload);
+    }
+
+    res.json(payload);
   } catch (error: any) {
-    console.error("[API] ✗ ERROR en ruta /citacion:", error);
-    console.error("[API] Stack trace:", error?.stack);
+    console.error("[API] ERROR en ruta /citacion:", error);
     res.status(500).json({
       success: false,
       message: "Error al enviar citaciones",
@@ -196,25 +172,21 @@ router.post("/citacion", async (req, res) => {
 });
 
 router.post("/comprobante", async (req, res) => {
-  console.log(`[API] POST /email/comprobante recibido`);
-  console.log(`[API] Body recibido:`, JSON.stringify(req.body));
-  
+  console.log([API] POST /email/comprobante recibido);
+  console.log([API] Body recibido:, JSON.stringify(req.body));
+
   try {
     const { citaIds } = req.body as { citaIds: number[] };
-    console.log(`[API] CitaIds extraídas:`, citaIds);
 
     if (!Array.isArray(citaIds) || citaIds.length === 0) {
-      console.log(`[API] ERROR: Lista de citas inválida o vacía`);
       return res
         .status(400)
         .json({ success: false, message: "Debe enviar lista de citas" });
     }
 
-    console.log(`[API] Buscando citas en BD...`);
     const citas = await prisma.cita.findMany({
       where: { id: { in: citaIds } },
     });
-    console.log(`[API] Citas encontradas: ${citas.length}`);
 
     const noAsistidas = citas
       .filter((c) => c.estado !== ("ASISTIDA" as EstadoCita))
@@ -223,9 +195,6 @@ router.post("/comprobante", async (req, res) => {
     const asistidasIds = citas
       .filter((c) => c.estado === ("ASISTIDA" as EstadoCita))
       .map((c) => c.id);
-
-    console.log(`[API] Citas no asistidas: ${noAsistidas.length}`, noAsistidas);
-    console.log(`[API] Citas asistidas: ${asistidasIds.length}`, asistidasIds);
 
     const resultadosPrevios = noAsistidas.map((id) => ({
       citaId: id,
@@ -238,16 +207,26 @@ router.post("/comprobante", async (req, res) => {
         ? await sendForCitas({ citaIds: asistidasIds, tipo: "COMPROBANTE" })
         : [];
 
-    console.log(`[API] Enviando respuesta con ${resultadosEnvio.length} resultados de envío`);
-    res.json({
-      success: true,
+    const resultados = [...resultadosPrevios, ...resultadosEnvio];
+    const ok = resultados.filter((r) => r.status === "OK").length;
+    const errors = resultados.filter((r) => r.status === "ERROR").length;
+    const hasError = errors > 0;
+
+    const payload = {
+      success: !hasError,
       noAsistidas,
-      resultados: [...resultadosPrevios, ...resultadosEnvio],
-    });
-    console.log(`[API] Respuesta enviada exitosamente`);
+      resultados,
+      ok,
+      errors,
+    };
+
+    if (hasError) {
+      return res.status(502).json(payload);
+    }
+
+    res.json(payload);
   } catch (error: any) {
-    console.error("[API] ✗ ERROR en ruta /comprobante:", error);
-    console.error("[API] Stack trace:", error?.stack);
+    console.error("[API] ERROR en ruta /comprobante:", error);
     res.status(500).json({
       success: false,
       message: "Error al enviar comprobantes",
