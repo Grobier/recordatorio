@@ -163,7 +163,20 @@ export async function sendEmail(options: {
       ) as Array<{ filename: string; content: Buffer }>;
     }
 
+    console.log("[MAILER] Enviando correo con Resend...");
+    console.log("[MAILER] From:", fromEmail);
+    console.log("[MAILER] To:", options.to);
+    console.log("[MAILER] Subject:", options.subject);
+    
     const result = await resend.emails.send(resendOptions);
+    
+    if (result.error) {
+      console.error("[MAILER] Error de Resend:", result.error);
+      throw new Error(`Resend error: ${JSON.stringify(result.error)}`);
+    }
+    
+    console.log("[MAILER] Resend respuesta exitosa:", result.data);
+    console.log("[MAILER] Email ID:", result.data?.id);
     return result;
   } else if (transporter) {
     // Usar SMTP tradicional

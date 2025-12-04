@@ -87,7 +87,7 @@ const sendForCitas = async ({
       const attachments = [...logoAttachment];
 
       const startTime = Date.now();
-      await sendEmail({
+      const emailResult = await sendEmail({
         to: cita.paciente.correo,
         subject: content.subject,
         html: content.html,
@@ -97,6 +97,7 @@ const sendForCitas = async ({
       });
       const duration = Date.now() - startTime;
       console.log(`[EMAIL] Correo enviado para cita ${citaId} (${duration}ms)`);
+      console.log(`[EMAIL] Resultado Resend:`, emailResult);
 
       await prisma.registroEnvioCorreo.create({
         data: {
