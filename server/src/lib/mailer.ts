@@ -116,7 +116,15 @@ export async function sendEmail(options: {
 }) {
   if (USE_RESEND && resend) {
     // Usar Resend
-    const fromEmail = options.from || MAIL_FROM || "onboarding@resend.dev";
+    // Con Resend, solo podemos usar dominios verificados
+    // Si MAIL_FROM contiene un dominio no verificado (como gmail.com), usar onboarding@resend.dev
+    let fromEmail = options.from || MAIL_FROM || "onboarding@resend.dev";
+    
+    // Si el email no es de resend.dev, forzar el uso del dominio de prueba
+    if (fromEmail && !fromEmail.includes("@resend.dev")) {
+      console.warn(`[MAILER] El dominio de ${fromEmail} no está verificado. Usando onboarding@resend.dev`);
+      fromEmail = "onboarding@resend.dev";
+    }
     
     const resendOptions: any = {
       from: fromEmail,
