@@ -24,7 +24,10 @@ const sendForCitas = async ({
   citaIds: number[];
   tipo: "CITACION" | "COMPROBANTE";
 }) => {
-  console.log([EMAIL] Iniciando envio de  para  citas:, citaIds);
+  console.log(
+    `[EMAIL] Iniciando envio de ${tipo} para ${citaIds.length} citas:`,
+    citaIds
+  );
 
   const resultados: ResultadoEnvio[] = [];
 
@@ -61,7 +64,9 @@ const sendForCitas = async ({
         cita.profesional || process.env.DEFAULT_PROFESIONAL || "Kinesiologo/a";
 
       const baseUrl =
-        process.env.BASE_URL || process.env.CLIENT_ORIGIN || "http://localhost:4000";
+        process.env.BASE_URL ||
+        process.env.CLIENT_ORIGIN ||
+        "http://localhost:4000";
 
       const emailData = {
         citaId: cita.id,
@@ -93,7 +98,7 @@ const sendForCitas = async ({
       const startTime = Date.now();
       await transporter.sendMail(mailOptions);
       const duration = Date.now() - startTime;
-      console.log([EMAIL] Correo enviado para cita  (ms));
+      console.log(`[EMAIL] Correo enviado para cita ${citaId} (${duration}ms)`);
 
       await prisma.registroEnvioCorreo.create({
         data: {
@@ -106,7 +111,7 @@ const sendForCitas = async ({
 
       resultados.push({ citaId, pacienteId: cita.pacienteId, status: "OK" });
     } catch (error: any) {
-      console.error([EMAIL] ERROR enviando correo para cita :, error);
+      console.error(`[EMAIL] ERROR enviando correo para cita ${citaId}:`, error);
 
       try {
         if (pacienteId) {
@@ -133,13 +138,13 @@ const sendForCitas = async ({
     }
   }
 
-  console.log([EMAIL] Proceso completado. Resultados:, resultados);
+  console.log(`[EMAIL] Proceso completado. Resultados:`, resultados);
   return resultados;
 };
 
 router.post("/citacion", async (req, res) => {
-  console.log([API] POST /email/citacion recibido);
-  console.log([API] Body recibido:, JSON.stringify(req.body));
+  console.log(`[API] POST /email/citacion recibido`);
+  console.log(`[API] Body recibido:`, JSON.stringify(req.body));
 
   try {
     const { citaIds } = req.body as { citaIds: number[] };
@@ -172,8 +177,8 @@ router.post("/citacion", async (req, res) => {
 });
 
 router.post("/comprobante", async (req, res) => {
-  console.log([API] POST /email/comprobante recibido);
-  console.log([API] Body recibido:, JSON.stringify(req.body));
+  console.log(`[API] POST /email/comprobante recibido`);
+  console.log(`[API] Body recibido:`, JSON.stringify(req.body));
 
   try {
     const { citaIds } = req.body as { citaIds: number[] };
