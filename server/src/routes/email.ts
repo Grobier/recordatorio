@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma";
-import { mailDefaults, transporter } from "../lib/mailer";
+import { mailDefaults, sendEmail } from "../lib/mailer";
 import {
   buildCitacionEmail,
   buildComprobanteEmail,
@@ -86,17 +86,15 @@ const sendForCitas = async ({
 
       const attachments = [...logoAttachment];
 
-      const mailOptions: any = {
-        ...mailDefaults,
+      const startTime = Date.now();
+      await sendEmail({
         to: cita.paciente.correo,
         subject: content.subject,
         html: content.html,
         text: content.text,
         attachments,
-      };
-
-      const startTime = Date.now();
-      await transporter.sendMail(mailOptions);
+        from: mailDefaults.from,
+      });
       const duration = Date.now() - startTime;
       console.log(`[EMAIL] Correo enviado para cita ${citaId} (${duration}ms)`);
 

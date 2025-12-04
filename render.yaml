@@ -32,3 +32,5 @@ services:
         sync: false
       - key: DEFAULT_PROFESIONAL
         sync: false
+      - key: RESEND_API_KEY
+        sync: false
