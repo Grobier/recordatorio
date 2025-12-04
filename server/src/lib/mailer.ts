@@ -13,7 +13,8 @@ const {
 } = process.env;
 
 // Fail fast if SMTP is unreachable so the API does not hang for minutes
-const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS) || 15000;
+// Aumentado a 30 segundos para dar más tiempo en conexiones lentas
+const SMTP_TIMEOUT_MS = Number(process.env.SMTP_TIMEOUT_MS) || 30000;
 
 if (!SMTP_HOST || !SMTP_PORT || !SMTP_USER || !SMTP_PASS || !MAIL_FROM) {
   console.warn(
@@ -43,6 +44,11 @@ export const transporter = nodemailer.createTransport({
   pool: false,
   maxConnections: 1,
   maxMessages: 1,
+  // Agregar opciones adicionales para mejorar la conexión
+  tls: {
+    rejectUnauthorized: false, // Permitir certificados autofirmados (útil para desarrollo)
+  },
+  debug: process.env.SMTP_DEBUG === "true", // Activar debug si es necesario
 });
 
 // Event listeners for debugging
@@ -56,6 +62,16 @@ transporter.on("idle", () => {
 
 transporter.on("error", (error: Error) => {
   console.error("[MAILER] Error en transporter:", error);
+  console.error("[MAILER] Código de error:", (error as any).code);
+  console.error("[MAILER] Comando que falló:", (error as any).command);
+});
+
+transporter.on("connect", () => {
+  console.log("[MAILER] Conectado exitosamente al servidor SMTP");
+});
+
+transporter.on("end", () => {
+  console.log("[MAILER] Conexión SMTP cerrada");
 });
 
 export const mailDefaults = {

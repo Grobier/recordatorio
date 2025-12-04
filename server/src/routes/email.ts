@@ -112,6 +112,17 @@ const sendForCitas = async ({
       resultados.push({ citaId, pacienteId: cita.pacienteId, status: "OK" });
     } catch (error: any) {
       console.error(`[EMAIL] ERROR enviando correo para cita ${citaId}:`, error);
+      console.error(`[EMAIL] Código de error:`, error?.code);
+      console.error(`[EMAIL] Comando que falló:`, error?.command);
+      console.error(`[EMAIL] Stack trace:`, error?.stack);
+
+      // Información adicional para diagnóstico
+      if (error?.code === "ETIMEDOUT") {
+        console.error(`[EMAIL] TIMEOUT: El servidor SMTP no respondió en ${process.env.SMTP_TIMEOUT_MS || 30000}ms`);
+        console.error(`[EMAIL] Verifica que el servidor SMTP sea accesible desde Render`);
+        console.error(`[EMAIL] SMTP_HOST configurado: ${process.env.SMTP_HOST || "NO CONFIGURADO"}`);
+        console.error(`[EMAIL] SMTP_PORT configurado: ${process.env.SMTP_PORT || "NO CONFIGURADO"}`);
+      }
 
       try {
         if (pacienteId) {
