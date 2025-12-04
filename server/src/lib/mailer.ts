@@ -158,7 +158,9 @@ export async function sendEmail(options: {
         })
       );
       // Filtrar nulls
-      resendOptions.attachments = resendOptions.attachments.filter((att) => att !== null);
+      resendOptions.attachments = resendOptions.attachments.filter(
+        (att: { filename: string; content: Buffer } | null) => att !== null
+      ) as Array<{ filename: string; content: Buffer }>;
     }
 
     const result = await resend.emails.send(resendOptions);
